@@ -34,7 +34,7 @@ USER ubuntu
 RUN mkdir /home/ubuntu/workspace
 # ------------------------------------------------------------------------------
 # Expose ports
-EXPOSE 8080
+EXPOSE 1323
 # ------------------------------------------------------------------------------
 # Add volumes
 VOLUME /home/ubuntu/workspace
