@@ -1,4 +1,4 @@
-Golang + mySQL(Maria DB) が使える Dockerfile です。
+Golang + MySQL が使える Dockerfile です。
 
 Expose 1323 してるので、Echo で使うのが主な用途だと想定してます。
 

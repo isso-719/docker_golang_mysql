@@ -1,39 +1,53 @@
-FROM amazonlinux:latest
+# Pull base image.
+FROM ubuntu:20.04
 LABEL maintainer "Kazuki Isogai <i@kazukiisogai.net>"
-
-# set environments
-ENV GOPATH /go
+# ------------------------------------------------------------------------------
+# Install base
+RUN apt-get update -y \
+  && apt-get install -y tar \
+  && apt-get install -y gzip \
+  && apt-get install -y git \
+  && apt-get install -y curl \
+  && apt-get install -y sudo
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+# ------------------------------------------------------------------------------
+# Install Go
+RUN curl -OL https://golang.org/dl/go1.17.linux-amd64.tar.gz \
+  && tar -C /usr/local -xzf ./go1.17.linux-amd64.tar.gz
 ENV PATH /usr/local/go/bin:/go/bin:$PATH
+# ------------------------------------------------------------------------------
+# Install MySQL
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update &&\
+  apt install -y mysql-server mysql-client
+# ------------------------------------------------------------------------------
+# Add users
+USER root
+RUN useradd -G sudo -m -s /bin/bash ubuntu&&\
+  echo "ubuntu ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/ubuntu&&\
+  echo 'root:password' | chpasswd
+USER ubuntu
+# ------------------------------------------------------------------------------
+# make workspace
+RUN mkdir /home/ubuntu/workspace
+# ------------------------------------------------------------------------------
+# Expose ports
+EXPOSE 8080
+# ------------------------------------------------------------------------------
+# Add volumes
+VOLUME /home/ubuntu/workspace
+WORKDIR /home/ubuntu/workspace
+# ------------------------------------------------------------------------------
+# Setup MySQL
+USER root
+RUN /etc/init.d/mysql start &&\
+  mysql -e "create database ubuntu;" &&\
+  mysql -e "create user 'ubuntu'@'localhost';" &&\
+  mysql -e "GRANT ALL ON *.* TO 'ubuntu'@'localhost';"
+USER ubuntu
+RUN sed -i -e '$a sudo /etc/init.d/mysql start && clear' ~/.bashrc
 
-# go install
-RUN yum update -y \
-    && yum install -y tar \
-    && yum install -y gzip \
-    && curl -OL https://golang.org/dl/go1.17.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf ./go1.17.linux-amd64.tar.gz
 
-# git install for go get command
-RUN yum install -y git
-
-# mysql install
-RUN yum remove -y mariadb-libs \
-    &&yum localinstall -y https://dev.mysql.com/get/mysql80-community-release-el7-2.noarch.rpm \
-    && yum install -y mysql-server
-
-# initialize workspace
-RUN mkdir /home/workspace
-VOLUME /home/workspace
-WORKDIR /home/workspace
-
-# go libraries
-# RUN go mod init example.com/m/v2
-# RUN go mod tidy
-
-# expose port
-EXPOSE 1323
-
-RUN cp /etc/skel/.bash* ~ \
-    && sed -i -e '$a /etc/init.d/mysqld start && clear' ~/.bashrc
-
-# set entrypoint
 ENTRYPOINT ["/bin/bash"]
